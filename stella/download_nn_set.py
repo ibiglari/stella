@@ -16,7 +16,7 @@ class DownloadSets(object):
     space.
     """
 
-    def __init__(self, fn_dir=None, flare_catalog_name=None):
+    def __init__(self, tess_download_dir, fn_dir=None, flare_catalog_name=None):
 
         """
         Parameters
@@ -33,6 +33,9 @@ class DownloadSets(object):
         fn_dir : str
             Path for storing data.
         """
+
+        self.tess_download_dir = tess_download_dir
+
         if fn_dir != None:
             self.fn_dir = fn_dir
         else:
@@ -48,6 +51,11 @@ class DownloadSets(object):
         else:
             self.flare_catalog_name = flare_catalog_name
 
+    def load_flares(self):
+        if self.flare_table is None:
+            self.flare_table = Table.read(os.path.join(self.fn_dir,
+                                                       self.flare_catalog_name),
+                                          format='ascii')
 
     def download_catalog(self):
         """
@@ -73,7 +81,7 @@ class DownloadSets(object):
         return
 
 
-    def download_lightcurves(self, remove_fits=True):
+    def download_lightcurves(self, exptime, sector, remove_fits=True):
         """
         Downloads light curves for the training, validation, and
         test sets.
@@ -84,42 +92,47 @@ class DownloadSets(object):
              Allows the user to remove the TESS light curveFITS
              files when done. This will save space. Default is True.
         """
-        if self.flare_table is None:
-            self.flare_table = Table.read(os.path.join(self.fn_dir,
-                                                       self.flare_catalog_name),
-                                          format='ascii')
-
+        self.load_flares()
 
         tics = np.unique(self.flare_table['TIC'])
         npy_name = '{0:09d}_sector{1:02d}.npy'
 
         for i in tqdm(range(len(tics))):
-            slc = search_lightcurve('TIC'+str(tics[i]),
-                                    mission='TESS',
-                                    exptime=120,
-                                    sector=[1,2],
-                                    author='SPOC')
+            retry = 0
+            while retry < 5:
+                try:
+                    slc = search_lightcurve('TIC'+str(tics[i]),
+                                            mission='TESS',
+                                            exptime=exptime,
+                                            sector=sector,
+                                            author='SPOC')
 
 
-            if len(slc) > 0:
-                lcs = slc.download_all(download_dir=self.fn_dir)
+                    if len(slc) > 0:
+                        lcs = slc.download_all(download_dir=self.tess_download_dir)
 
-                for j in range(len(lcs)):
-                    # Default lightkurve flux = pdcsap_flux
-                    lc = lcs[j].normalize()
+                        for j in range(len(lcs)):
+                            # Default lightkurve flux = pdcsap_flux
+                            lc = lcs[j].remove_nans().normalize()
 
-                    np.save(os.path.join(self.fn_dir, npy_name.format(tics[i], lc.sector)),
-                            np.array([lc.time.value,
-                                      lc.flux.value,
-                                      lc.flux_err.value]))
+                            np.save(os.path.join(self.fn_dir, npy_name.format(tics[i], lc.sector)),
+                                    np.array([lc.time.value,
+                                            lc.flux.value,
+                                            lc.flux_err.value]))
 
-                    # Removes FITS files when done
-                    if remove_fits == True:
-                        for dp, dn, fn in os.walk(os.path.join(self.fn_dir, 'mastDownload')):
-                            for file in [f for f in fn if f.endswith('.fits')]:
-                                os.remove(os.path.join(dp, file))
-                                os.rmdir(dp)
-
+                            # Removes FITS files when done
+                            if remove_fits == True:
+                                for dp, dn, fn in os.walk(os.path.join(self.fn_dir, 'mastDownload')):
+                                    for file in [f for f in fn if f.endswith('.fits')]:
+                                        os.remove(os.path.join(dp, file))
+                                        os.rmdir(dp)
+                except:
+                    retry = retry + 1
+                    print("Error downloading lightcurves for " + str(tics[i]) + ". Try " + str(retry) + "/5")
+                    continue
+                break
+            if retry == 5:
+              raise Exception("Download failed") 
 
         if remove_fits == True:
             os.rmdir(os.path.join(self.fn_dir, 'mastDownload/TESS'))

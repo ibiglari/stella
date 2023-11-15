@@ -3,6 +3,8 @@ __pycache__
 */*/__pycache__
 stella.egg-info
 docs/_build
+var
+mastDownload
 build
 dist
 .DS_Store
@@ -16,3 +18,7 @@ dist
 *.cppimporthash
 .rendered.*
 *.egg-info
+.venv/
+.vscode/
+models/
+output/

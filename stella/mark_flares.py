@@ -69,6 +69,9 @@ class FitFlares(object):
         results = []
 
         for i, v in enumerate(values):
+            results.append([v])
+        return np.array(results)
+    """
             if i == 0:
                 mini = maxi = v
                 temp = [v]
@@ -88,8 +91,8 @@ class FitFlares(object):
                 # GETS THE LAST GROUP
                 if i == len(values)-1:
                     results.append(temp)
+    """
 
-        return np.array(results)
 
 
     def get_init_guesses(self, groupings, time, flux, err, prob, 
@@ -184,7 +187,7 @@ class FitFlares(object):
         kernel_size  = 15
         kernel_size1 = 21
 
-        for i in tqdm(range(len(self.IDs)), desc='Finding & Fitting Flares'):
+        for i in range(len(self.IDs)):
             time = self.time[i]+0.0
             flux = self.flux[i]+0.0
             err  = self.flux_err[i]+0.0

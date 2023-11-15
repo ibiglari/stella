@@ -175,7 +175,7 @@ class ConvNN(object):
         
 
     def train_models(self, seeds=[2], epochs=350, batch_size=64, shuffle=False,
-                     pred_test=False, save=False):
+                     pred_test=False, save=False, custom_name=""):
         """
         Runs n number of models with given initial random seeds of
         length n. Also saves each model run to a hidden ~/.stella 
@@ -229,7 +229,7 @@ class ConvNN(object):
         
         for seed in seeds:
             
-            fmt_tail = '_s{0:04d}_i{1:04d}_b{2}'.format(int(seed), int(epochs), self.frac_balance)
+            fmt_tail = '_s{0:04d}_i{1:04d}_b{2}{3}'.format(int(seed), int(epochs), self.frac_balance, custom_name)
             model_fmt = 'ensemble' + fmt_tail + '.h5'
 
             keras.backend.clear_session()
@@ -535,7 +535,7 @@ class ConvNN(object):
         predictions = []
         pred_t, pred_f, pred_e = [], [], []
     
-        for j in tqdm(range(len(times))):
+        for j in range(len(times)):
             time = times[j] + 0.0
             lc   = fluxes[j] / np.nanmedian(fluxes[j]) # MUST BE NORMALIZED
             err  = errs[j] + 0.0

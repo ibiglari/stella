@@ -30,7 +30,8 @@ class FlareDataSet(object):
     def __init__(self, fn_dir=None, catalog=None, 
                  downloadSet=None,
                  cadences=200, frac_balance=0.73,
-                 training=0.80, validation=0.90):
+                 training=0.80, validation=0.90,
+                 time_offset=2457000.0):
         """
         Loads in time, flux, flux error data. Reshapes
         arrays into `cadences`-sized bins and labels
@@ -69,6 +70,8 @@ class FlareDataSet(object):
             self.fn_dir = downloadSet.fn_dir
             self.catalog = downloadSet.flare_table
 
+        self.time_offset = time_offset 
+
         self.cadences = cadences
 
         self.frac_balance = frac_balance
@@ -94,8 +97,7 @@ class FlareDataSet(object):
         self.test_tpeaks = misc[9]
 
 
-    def load_files(self, id_keyword='TIC', ft_keyword='tpeak',
-                   time_offset=2457000.0):
+    def load_files(self, id_keyword='TIC', ft_keyword='tpeak'):
         """
         Loads in light curves from the assigned training set
         directory. Files must be formatted such that the ID 
@@ -148,7 +150,7 @@ class FlareDataSet(object):
         
             peaks = self.catalog[(self.catalog[id_keyword] == tic)][ft_keyword].data 
 #                            (self.catalog['sector'] == sector)][ft_keyword].data
-            peaks = peaks - time_offset
+            peaks = peaks - self.time_offset
             tpeaks.append(peaks)
 
         self.ids      = np.array(tics)
@@ -176,7 +178,7 @@ class FlareDataSet(object):
              An n-sized array of labels for each row in the training
              data.
         """
-        ss = 240000
+        ss = 480000
 
         training_matrix = np.zeros((ss, self.cadences))
         training_labels = np.zeros(ss, dtype=int)
